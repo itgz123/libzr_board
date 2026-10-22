@@ -1,0 +1,6 @@
+board:
+  name: DM_MC02_DEFAULT
+  full_name: libzr DM_MC02 (STM32H723VGT6)
+  vendor: libzr
+  socs:
+    - name: stm32h723xx

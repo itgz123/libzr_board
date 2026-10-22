@@ -1,0 +1,22 @@
+# Copyright (c) 2026 libzr
+# SPDX-License-Identifier: Apache-2.0
+
+identifier: DM_MC02_DEFAULT
+name: libzr DM_MC02
+type: mcu
+arch: arm
+toolchain:
+  - zephyr
+  - gnuarmemb
+ram: 320
+flash: 1024
+supported:
+  - gpio
+  - uart
+  - can
+  - spi
+  - i2c
+  - pwm
+  - adc
+  - usb_device
+vendor: libzr

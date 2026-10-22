@@ -1,0 +1,6 @@
+board:
+  name: DJI_A_DEFAULT
+  full_name: libzr DJI_A (STM32F427IIH6)
+  vendor: libzr
+  socs:
+    - name: stm32f427xx

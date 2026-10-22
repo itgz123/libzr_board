@@ -1,0 +1,23 @@
+# Copyright (c) 2026 libzr
+# SPDX-License-Identifier: Apache-2.0
+
+identifier: DJI_A_DEFAULT
+name: libzr DJI_A
+type: mcu
+arch: arm
+toolchain:
+  - zephyr
+  - gnuarmemb
+ram: 256
+flash: 2048
+supported:
+  - gpio
+  - uart
+  - can
+  - spi
+  - i2c
+  - pwm
+  - adc
+  - dac
+  - usb_device
+vendor: libzr

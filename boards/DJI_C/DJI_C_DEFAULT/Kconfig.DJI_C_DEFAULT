@@ -1,0 +1,5 @@
+# Copyright (c) 2026 libzr
+# SPDX-License-Identifier: Apache-2.0
+
+config BOARD_DJI_C_DEFAULT
+	select SOC_STM32F407XG

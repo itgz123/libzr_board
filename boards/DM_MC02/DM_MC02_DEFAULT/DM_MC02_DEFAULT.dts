@@ -1,0 +1,309 @@
+/*
+ * Copyright (c) 2026 libzr
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * libzr DM_MC02 板级设备树
+ *   MCU : STM32H723VGT6 (LQFP100, 1 MB Flash / 320 KB AXI SRAM)
+ *   晶振: HSE 24 MHz
+ *   SYSCLK 480 MHz, HCLK 240 MHz, APB1..4 120 MHz
+ *   FDCAN 内核时钟 120 MHz (PLL1_Q)
+ *   USB 内核时钟 48 MHz (PLL3_Q)
+ *   调试: CMSIS-DAP / JLink, SWD
+ *
+ * 引脚定义来自 BetaRobot/cubemx/DM_MC02 与 bsp/bsp_map/DM_MC02。
+ */
+
+/dts-v1/;
+
+#include <st/h7/stm32h723Xg.dtsi>
+#include <st/h7/stm32h723vgtx-pinctrl.dtsi>
+#include <zephyr/dt-bindings/input/input-event-codes.h>
+#include <zephyr/dt-bindings/gpio/gpio.h>
+#include <zephyr/dt-bindings/i2c/i2c.h>
+
+/ {
+	model = "libzr DM_MC02 (STM32H723VGT6)";
+	compatible = "libzr,dm-mc02";
+
+	chosen {
+		/* UART7 作为日志口 */
+		zephyr,console = &uart7;
+		zephyr,shell-uart = &uart7;
+		zephyr,sram = &sram0;
+		zephyr,dtcm = &dtcm;
+		zephyr,flash = &flash0;
+		zephyr,canbus = &fdcan1;
+	};
+
+	gpio_keys: gpio_keys {
+		compatible = "gpio-keys";
+
+		/* 按键按低有效、内部上拉处理；若硬件相反请改为 GPIO_ACTIVE_HIGH */
+		user_key: button_0 {
+			label = "USER_KEY";
+			gpios = <&gpioe 14 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+			zephyr,code = <INPUT_KEY_0>;
+		};
+
+		ex_key: button_1 {
+			label = "EX_KEY";
+			gpios = <&gpioa 15 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+			zephyr,code = <INPUT_KEY_1>;
+		};
+
+		lcd_key1: button_2 {
+			label = "LCD_KEY1";
+			gpios = <&gpioa 5 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+			zephyr,code = <INPUT_KEY_2>;
+		};
+
+		lcd_key2: button_3 {
+			label = "LCD_KEY2";
+			gpios = <&gpiod 10 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+			zephyr,code = <INPUT_KEY_3>;
+		};
+	};
+
+	aliases {
+		sw0 = &user_key;
+		sw1 = &ex_key;
+		sw2 = &lcd_key1;
+		sw3 = &lcd_key2;
+	};
+};
+
+/* ------------------------------------------------------------------------- */
+/* 时钟                                                                       */
+/* ------------------------------------------------------------------------- */
+
+&clk_hse {
+	clock-frequency = <DT_FREQ_M(24)>;
+	status = "okay";
+};
+
+/* PLL1: 24/2*40 = 480 MHz */
+&pll {
+	div-m = <2>;
+	mul-n = <40>;
+	div-p = <1>;
+	div-q = <4>;	/* 120 MHz, FDCAN */
+	div-r = <2>;	/* 240 MHz */
+	clocks = <&clk_hse>;
+	status = "okay";
+};
+
+/* PLL3: 24/2*16 = 192 MHz -> Q = 48 MHz, USB */
+&pll3 {
+	div-m = <2>;
+	mul-n = <16>;
+	div-p = <2>;
+	div-q = <4>;
+	div-r = <2>;
+	clocks = <&clk_hse>;
+	status = "okay";
+};
+
+&rcc {
+	clocks = <&pll>;
+	clock-frequency = <DT_FREQ_M(480)>;
+	d1cpre = <1>;	/* CPU 480 MHz */
+	hpre = <2>;	/* HCLK 240 MHz */
+	d1ppre = <2>;	/* APB3 120 MHz */
+	d2ppre1 = <2>;	/* APB1 120 MHz */
+	d2ppre2 = <2>;	/* APB2 120 MHz */
+	d3ppre = <2>;	/* APB4 120 MHz */
+};
+
+&pwr {
+	power-supply = "ldo";
+};
+
+/* ------------------------------------------------------------------------- */
+/* 串口                                                                       */
+/* ------------------------------------------------------------------------- */
+
+/* USART1: 通用 (921600 8N1) */
+&usart1 {
+	pinctrl-0 = <&usart1_tx_pa9 &usart1_rx_pb7>;
+	pinctrl-names = "default";
+	current-speed = <115200>;
+	status = "okay";
+};
+
+/* USART2: RS485，DE = PD4 */
+&usart2 {
+	pinctrl-0 = <&usart2_tx_pd5 &usart2_rx_pd6 &usart2_de_pd4>;
+	pinctrl-names = "default";
+	current-speed = <115200>;
+	de-enable;
+	status = "okay";
+};
+
+/* USART3: RS485，DE = PB14 */
+&usart3 {
+	pinctrl-0 = <&usart3_tx_pd8 &usart3_rx_pd9 &usart3_de_pb14>;
+	pinctrl-names = "default";
+	current-speed = <115200>;
+	de-enable;
+	status = "okay";
+};
+
+/* UART5: SBUS 接收 (100000 8E1) */
+&uart5 {
+	pinctrl-0 = <&uart5_tx_pc12 &uart5_rx_pd2>;
+	pinctrl-names = "default";
+	current-speed = <100000>;
+	status = "okay";
+};
+
+/* UART7: 日志 / 控制台 */
+&uart7 {
+	pinctrl-0 = <&uart7_tx_pe8 &uart7_rx_pe7>;
+	pinctrl-names = "default";
+	current-speed = <115200>;
+	status = "okay";
+};
+
+/* UART8 / UART9 / USART10: 扩展串口 */
+&uart8 {
+	pinctrl-0 = <&uart8_tx_pe1 &uart8_rx_pe0>;
+	pinctrl-names = "default";
+	current-speed = <115200>;
+	status = "okay";
+};
+
+&uart9 {
+	pinctrl-0 = <&uart9_tx_pd15 &uart9_rx_pd14>;
+	pinctrl-names = "default";
+	current-speed = <115200>;
+	status = "okay";
+};
+
+&usart10 {
+	pinctrl-0 = <&usart10_tx_pe3 &usart10_rx_pe2>;
+	pinctrl-names = "default";
+	current-speed = <115200>;
+	status = "okay";
+};
+
+/* ------------------------------------------------------------------------- */
+/* FDCAN                                                                      */
+/* ------------------------------------------------------------------------- */
+
+&fdcan1 {
+	pinctrl-0 = <&fdcan1_rx_pd0 &fdcan1_tx_pd1>;
+	pinctrl-names = "default";
+	clocks = <&rcc STM32_CLOCK(APB1_2, 8)>,
+		 <&rcc STM32_SRC_PLL1_Q FDCAN_SEL(1)>;
+	status = "okay";
+};
+
+&fdcan2 {
+	pinctrl-0 = <&fdcan2_rx_pb5 &fdcan2_tx_pb6>;
+	pinctrl-names = "default";
+	clocks = <&rcc STM32_CLOCK(APB1_2, 8)>,
+		 <&rcc STM32_SRC_PLL1_Q FDCAN_SEL(1)>;
+	status = "okay";
+};
+
+&fdcan3 {
+	pinctrl-0 = <&fdcan3_rx_pd12 &fdcan3_tx_pd13>;
+	pinctrl-names = "default";
+	clocks = <&rcc STM32_CLOCK(APB1_2, 8)>,
+		 <&rcc STM32_SRC_PLL1_Q FDCAN_SEL(1)>;
+	status = "okay";
+};
+
+/* ------------------------------------------------------------------------- */
+/* SPI                                                                        */
+/* ------------------------------------------------------------------------- */
+
+/* SPI1: BMI088 (PB3=SCK, PB4=MISO, PD7=MOSI) */
+&spi1 {
+	pinctrl-0 = <&spi1_sck_pb3 &spi1_miso_pb4 &spi1_mosi_pd7>;
+	pinctrl-names = "default";
+	status = "okay";
+};
+
+/* SPI2: PB13=SCK, PC2_C=MISO, PC1=MOSI */
+&spi2 {
+	pinctrl-0 = <&spi2_sck_pb13 &spi2_miso_pc2_c &spi2_mosi_pc1>;
+	pinctrl-names = "default";
+	status = "okay";
+};
+
+/* ------------------------------------------------------------------------- */
+/* I2C                                                                        */
+/* ------------------------------------------------------------------------- */
+
+/* I2C2: PB10=SCL, PB11=SDA */
+&i2c2 {
+	pinctrl-0 = <&i2c2_scl_pb10 &i2c2_sda_pb11>;
+	pinctrl-names = "default";
+	clock-frequency = <I2C_BITRATE_FAST>;
+	status = "okay";
+};
+
+/* ------------------------------------------------------------------------- */
+/* ADC                                                                        */
+/* ------------------------------------------------------------------------- */
+
+/* ADC1_INP4: PC4，电池电压 */
+&adc1 {
+	pinctrl-0 = <&adc1_inp4_pc4>;
+	pinctrl-names = "default";
+	st,adc-clock-source = "SYNC";
+	st,adc-prescaler = <4>;
+	status = "okay";
+};
+
+/* ------------------------------------------------------------------------- */
+/* PWM                                                                        */
+/* ------------------------------------------------------------------------- */
+
+/* TIM1: PE9 (CH1) / PE13 (CH3) */
+&timers1 {
+	status = "okay";
+
+	pwm1: pwm {
+		status = "okay";
+		pinctrl-0 = <&tim1_ch1_pe9 &tim1_ch3_pe13>;
+		pinctrl-names = "default";
+	};
+};
+
+/* TIM2: PA0 (CH1) / PA2 (CH3) */
+&timers2 {
+	status = "okay";
+
+	pwm2: pwm {
+		status = "okay";
+		pinctrl-0 = <&tim2_ch1_pa0 &tim2_ch3_pa2>;
+		pinctrl-names = "default";
+	};
+};
+
+/* TIM12_CH2: PB15，蜂鸣器 (4 kHz) */
+&timers12 {
+	status = "okay";
+
+	pwm12: pwm {
+		status = "okay";
+		pinctrl-0 = <&tim12_ch2_pb15>;
+		pinctrl-names = "default";
+	};
+};
+
+/* ------------------------------------------------------------------------- */
+/* USB                                                                        */
+/* ------------------------------------------------------------------------- */
+
+/* USB OTG HS 走内部 FS PHY；内核时钟取 PLL3_Q = 48 MHz */
+zephyr_udc0: &usbotg_hs {
+	pinctrl-0 = <&usb_otg_hs_dm_pa11 &usb_otg_hs_dp_pa12>;
+	pinctrl-names = "default";
+	clocks = <&rcc STM32_CLOCK(AHB1, 25)>,
+		 <&rcc STM32_SRC_PLL3_Q USB_SEL(2)>;
+	status = "okay";
+};

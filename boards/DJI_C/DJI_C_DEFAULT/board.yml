@@ -1,0 +1,6 @@
+board:
+  name: DJI_C_DEFAULT
+  full_name: libzr DJI_C (STM32F407IGH6)
+  vendor: libzr
+  socs:
+    - name: stm32f407xx
